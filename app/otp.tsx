@@ -1,12 +1,50 @@
-import { View, Text, StyleSheet, TextInput, Button } from "react-native";
+// TODO: Fix OTP error where if you input correct otp, it still gives error.
+
+import { useState } from "react";
+import { View, Text, StyleSheet, TextInput, Button, Alert } from "react-native";
+// import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { useRouter, useLocalSearchParams } from "expo-router";
+// import app from "../firebaseConfig";
 
 export default function Index() {
+    const router = useRouter();
+    const { email, password } = useLocalSearchParams(); 
+    const [otp, setOtp] = useState("");
+
+    const verifyOtp = async () => {
+        if (!email) {
+            Alert.alert("Error", "No email found. Try again.");
+            return;
+        }
+
+        try {
+            const response = await fetch("http://XXX.XXX.X.XXX:5000/verify-otp", { // your ipv4 address
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, otp }),
+            });
+
+            const data = await response.json();
+            console.log("Verification Response:", data);
+            
+            if (data.success) {
+                // const auth = getAuth(app);
+                // await createUserWithEmailAndPassword(auth, email, password);
+                Alert.alert("Success", "Account created!");
+                router.push("/login"); 
+            } else {
+                Alert.alert("Error", "Invalid OTP.");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Try again.");
+        }
+    };
     return (
         <View style={styles.container}>
             <View style={styles.otpContainer}>
                 <Text style={[styles.otpContainer__headerText, styles.centerText, styles.text]}>We’ve sent OTP Code</Text>
                 <Text style={[styles.text, styles.centerText]}>Enter the 6 digit verification code that was sent to your email.</Text>
-                <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>Enter 6-digit Recovery Code</Text>
+                <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>Enter 6-digit Code</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Enter 6-digit code"
@@ -14,7 +52,7 @@ export default function Index() {
                     maxLength={6}
                 />
                 <View style={styles.buttonContainer}>
-                    <Button title="Submit" color="#1c4695"/>
+                    <Button title="Submit" color="#1c4695" onPress={verifyOtp} />
                 </View>
                 <Text style={styles.text}>OTP not received? <Text style={{ textDecorationLine: "underline" }}>Send Again</Text></Text>
             </View>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -10,7 +10,7 @@ export default function Index() {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isOtpEnabled, setIsOtpEnabled] = useState(false);
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
 
     const passwordCriteria = [
         { regex: /.{8,25}/, text: "At least 8-25 characters" },
@@ -26,6 +26,26 @@ export default function Index() {
         const isEmailValid = emailRegex.test(inputEmail);
         const isPasswordValid = passwordCriteria.every(criteria => criteria.regex.test(inputPassword));
         setIsOtpEnabled(isEmailValid && isPasswordValid);
+    };
+
+    const sendOtp = async () => {
+        try {
+            const response = await fetch("http://XXX.XXX.X.XXX:5000/send-otp", { // your ipv4 address
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                Alert.alert("Success", "OTP has been sent to your email.");
+                router.push({ pathname: "/otp", params: { email, password } });
+            } else {
+                Alert.alert("Error", "Failed to send OTP.");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Try again.");
+        }
     };
 
     return (
@@ -87,7 +107,7 @@ export default function Index() {
                 })}
 
                 <View style={styles.buttonContainer}>
-                    <Button title="Send OTP" color="#1c4695" disabled={!isOtpEnabled} onPress={() => router.push("/otp")} />
+                    <Button title="Send OTP" color="#1c4695" disabled={!isOtpEnabled} onPress={sendOtp} />
                 </View>
             </View>
         </View>
