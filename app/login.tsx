@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, StatusBar, Button, TextInput } from "react-native";
 import RadioGroup from "react-native-radio-buttons-group";
+import { useRouter } from "expo-router";
 
 export default function Index() {
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const router = useRouter();
 
   const radioButtons = [
     { id: "yes", label: "Remember Me", value: "remember" },
@@ -20,7 +22,7 @@ export default function Index() {
         <View style={styles.loginBox__content}>
           <Text style={styles.loginBox__content__accountText}>Do not have an account yet?</Text>
           <View style={styles.buttonContainer}>
-            <Button title="Let's go!" color="#1c4695" />
+            <Button title="Let's go!" color="#1c4695" onPress={() => router.push("/register")}/>
           </View>
         </View>
       </View>
