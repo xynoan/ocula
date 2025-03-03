@@ -2,6 +2,8 @@ import { useState } from "react";
 import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { IPV4_ADDRESS } from '@env';
+import { getAuth, fetchSignInMethodsForEmail } from "firebase/auth";
 
 export default function Index() {
     const router = useRouter();
@@ -20,17 +22,20 @@ export default function Index() {
         { regex: /[!@#$%^&*]/, text: "At least 1 special character (! @ # $ % ^ & *)" }
     ];
 
-    const validateForm = (inputEmail: string, inputPassword: string) => {
+    const validateForm = async (inputEmail: string, inputPassword: string) => {
         setEmail(inputEmail);
         setPassword(inputPassword);
+    
         const isEmailValid = emailRegex.test(inputEmail);
         const isPasswordValid = passwordCriteria.every(criteria => criteria.regex.test(inputPassword));
+    
         setIsOtpEnabled(isEmailValid && isPasswordValid);
     };
+    
 
     const sendOtp = async () => {
         try {
-            const response = await fetch("http://XXX.XXX.X.XXX:5000/send-otp", { // your ipv4 address
+            const response = await fetch(`http://${IPV4_ADDRESS}:5000/send-otp`, { // your ipv4 address
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),

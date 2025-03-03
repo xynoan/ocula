@@ -1,15 +1,16 @@
-// TODO: Fix OTP error where if you input correct otp, it still gives error.
-
 import { useState } from "react";
 import { View, Text, StyleSheet, TextInput, Button, Alert } from "react-native";
-// import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter, useLocalSearchParams } from "expo-router";
-// import app from "../firebaseConfig";
+import app from "../firebaseConfig";
+import { IPV4_ADDRESS } from '@env';
 
 export default function Index() {
     const router = useRouter();
-    const { email, password } = useLocalSearchParams(); 
+    const { email, password } = useLocalSearchParams();
     const [otp, setOtp] = useState("");
+    const userEmail = Array.isArray(email) ? email[0] : email;
+    const userPassword = Array.isArray(password) ? password[0] : password;
 
     const verifyOtp = async () => {
         if (!email) {
@@ -18,7 +19,7 @@ export default function Index() {
         }
 
         try {
-            const response = await fetch("http://XXX.XXX.X.XXX:5000/verify-otp", { // your ipv4 address
+            const response = await fetch(`http://${IPV4_ADDRESS}:5000/verify-otp`, { // your ipv4 address
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, otp }),
@@ -26,12 +27,23 @@ export default function Index() {
 
             const data = await response.json();
             console.log("Verification Response:", data);
-            
+
             if (data.success) {
-                // const auth = getAuth(app);
-                // await createUserWithEmailAndPassword(auth, email, password);
+                const auth = getAuth(app);
+
+                if (!email || Array.isArray(email)) {
+                    Alert.alert("Error", "Invalid email format");
+                    return;
+                }
+
+                if (!password || Array.isArray(password)) {
+                    Alert.alert("Error", "Invalid password format");
+                    return;
+                }
+
+                await createUserWithEmailAndPassword(auth, userEmail, userPassword);
                 Alert.alert("Success", "Account created!");
-                router.push("/login"); 
+                router.push("/login");
             } else {
                 Alert.alert("Error", "Invalid OTP.");
             }
@@ -45,8 +57,6 @@ export default function Index() {
                 <Text style={[styles.otpContainer__headerText, styles.centerText, styles.text]}>We’ve sent OTP Code</Text>
                 <Text style={[styles.text, styles.centerText]}>Enter the 6 digit verification code that was sent to your email.</Text>
                 <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>Enter 6-digit Code</Text>
-                <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>{email}</Text>
-                <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>{password}</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Enter 6-digit code"
