@@ -10,7 +10,7 @@ export default function Index() {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isOtpEnabled, setIsOtpEnabled] = useState(false);
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     const passwordCriteria = [
         { regex: /.{8,25}/, text: "At least 8-25 characters" },
@@ -35,7 +35,6 @@ export default function Index() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
-
             const data = await response.json();
             if (data.success) {
                 Alert.alert("Success", "OTP has been sent to your email.");

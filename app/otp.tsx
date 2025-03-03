@@ -45,11 +45,15 @@ export default function Index() {
                 <Text style={[styles.otpContainer__headerText, styles.centerText, styles.text]}>We’ve sent OTP Code</Text>
                 <Text style={[styles.text, styles.centerText]}>Enter the 6 digit verification code that was sent to your email.</Text>
                 <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>Enter 6-digit Code</Text>
+                <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>{email}</Text>
+                <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>{password}</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Enter 6-digit code"
                     keyboardType="number-pad"
                     maxLength={6}
+                    onChangeText={setOtp}
+                    value={otp}
                 />
                 <View style={styles.buttonContainer}>
                     <Button title="Submit" color="#1c4695" onPress={verifyOtp} />
