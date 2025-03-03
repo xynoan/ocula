@@ -35,11 +35,19 @@ export default function Index() {
 
     const sendOtp = async () => {
         try {
-            const response = await fetch(`http://${IPV4_ADDRESS}:5000/send-otp`, { // your ipv4 address
+            const auth = getAuth();
+            const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+            if (signInMethods.length > 0) {
+                Alert.alert("Sorry!", "Email is already registered.");
+                return;
+            }
+    
+            const response = await fetch(`http://${IPV4_ADDRESS}:5000/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
+    
             const data = await response.json();
             if (data.success) {
                 Alert.alert("Success", "OTP has been sent to your email.");
