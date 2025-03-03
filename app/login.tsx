@@ -1,15 +1,30 @@
+// TODO: Implement "Remember Me" and "Forgot Password" features
 import React, { useState } from "react";
-import { View, Text, StyleSheet, StatusBar, Button, TextInput } from "react-native";
+import { View, Text, StyleSheet, StatusBar, Button, TextInput, Alert } from "react-native";
 import RadioGroup from "react-native-radio-buttons-group";
 import { useRouter } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebaseConfig"; 
 
 export default function Index() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const router = useRouter();
 
   const radioButtons = [
     { id: "yes", label: "Remember Me", value: "remember" },
   ];
+
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      Alert.alert("Login Successful!");
+      router.push("/home"); 
+    } catch (error) {
+      Alert.alert("Error", (error as Error).message);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -32,9 +47,21 @@ export default function Index() {
           <Text style={styles.headerText}>CIRCLE</Text>
         </View>
         <View style={styles.loginBox__content}>
-          <TextInput style={styles.textInput} placeholder="Email" placeholderTextColor="#1c4695" />
-          <TextInput style={styles.textInput} placeholder="Password" placeholderTextColor="#1c4695" secureTextEntry={true} />
-
+        <TextInput
+            style={styles.textInput}
+            placeholder="Email"
+            placeholderTextColor="#1c4695"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.textInput}
+            placeholder="Password"
+            placeholderTextColor="#1c4695"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
           <View style={styles.radioContainer}>
             <RadioGroup
               radioButtons={radioButtons}
@@ -45,7 +72,7 @@ export default function Index() {
 
           <Text style={{ textDecorationLine: "underline" }}>Forgot Password?</Text>
           <View style={styles.buttonContainer}>
-            <Button title="Log in" color="#1c4695" />
+            <Button title="Log in" color="#1c4695" onPress={handleLogin} />
           </View>
         </View>
       </View>

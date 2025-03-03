@@ -21,7 +21,7 @@ app.post("/send-otp", async (req, res) => {
     const { email } = req.body;
     const otp = Math.floor(100000 + Math.random() * 900000);
     otpStore[email] = otp;
-
+    console.log("Stored OTP:", otpStore[email]);
     const mailOptions = {
         from: process.env.GMAIL_USER,
         to: email,
@@ -53,7 +53,6 @@ app.post("/verify-otp", (req, res) => {
 
     console.log("Verifying OTP for:", email);
     console.log("Received OTP:", otp);
-    console.log("Stored OTP:", otpStore[email]);
 
     if (!otpStore[email]) {
         return res.status(400).json({ success: false, message: "OTP expired or not found." });

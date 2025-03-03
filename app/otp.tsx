@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, StyleSheet, TextInput, Button, Alert } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TextInput, Button, Alert, TouchableOpacity } from "react-native";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import app from "../firebaseConfig";
@@ -11,6 +11,21 @@ export default function Index() {
     const [otp, setOtp] = useState("");
     const userEmail = Array.isArray(email) ? email[0] : email;
     const userPassword = Array.isArray(password) ? password[0] : password;
+    const [resendDisabled, setResendDisabled] = useState(false);
+    const [resendTimer, setResendTimer] = useState(30);
+
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (resendDisabled && resendTimer > 0) {
+            timer = setInterval(() => {
+                setResendTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (resendTimer === 0) {
+            setResendDisabled(false);
+            setResendTimer(30);
+        }
+        return () => clearInterval(timer);
+    }, [resendDisabled, resendTimer]);
 
     const verifyOtp = async () => {
         if (!email) {
@@ -19,7 +34,7 @@ export default function Index() {
         }
 
         try {
-            const response = await fetch(`http://${IPV4_ADDRESS}:5000/verify-otp`, { // your ipv4 address
+            const response = await fetch(`http://${IPV4_ADDRESS}:5000/verify-otp`, { 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, otp }),
@@ -51,6 +66,31 @@ export default function Index() {
             Alert.alert("Error", "Network error. Try again.");
         }
     };
+
+    const resendOtp = async () => {
+        try {
+            setResendDisabled(true);
+
+            const response = await fetch(`http://${IPV4_ADDRESS}:5000/send-otp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: userEmail }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                Alert.alert("Success", "OTP has been resent.");
+            } else {
+                Alert.alert("Error", "Failed to resend OTP.");
+                setResendDisabled(false);
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Try again.");
+            setResendDisabled(false);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.otpContainer}>
@@ -68,7 +108,17 @@ export default function Index() {
                 <View style={styles.buttonContainer}>
                     <Button title="Submit" color="#1c4695" onPress={verifyOtp} />
                 </View>
-                <Text style={styles.text}>OTP not received? <Text style={{ textDecorationLine: "underline" }}>Send Again</Text></Text>
+                <TouchableOpacity
+                    onPress={resendOtp}
+                    disabled={resendDisabled}
+                >
+                    <Text style={[styles.text, resendDisabled && { color: "gray" }]}>
+                        OTP not received?{" "}
+                        <Text style={{ textDecorationLine: "underline" }}>
+                            {resendDisabled ? `Sent (${resendTimer}s)` : "Send Again"}
+                        </Text>
+                    </Text>
+                </TouchableOpacity>
             </View>
         </View>
     )
