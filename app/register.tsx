@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function Index() {
+    const router = useRouter();
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isOtpEnabled, setIsOtpEnabled] = useState(false);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Email validation regex
 
     const passwordCriteria = [
         { regex: /.{8,25}/, text: "At least 8-25 characters" },
@@ -15,10 +20,12 @@ export default function Index() {
         { regex: /[!@#$%^&*]/, text: "At least 1 special character (! @ # $ % ^ & *)" }
     ];
 
-    const validatePassword = (input: string) => {
-        setPassword(input);
-        const allValid = passwordCriteria.every(criteria => criteria.regex.test(input));
-        setIsOtpEnabled(allValid);
+    const validateForm = (inputEmail: string, inputPassword: string) => {
+        setEmail(inputEmail);
+        setPassword(inputPassword);
+        const isEmailValid = emailRegex.test(inputEmail);
+        const isPasswordValid = passwordCriteria.every(criteria => criteria.regex.test(inputPassword));
+        setIsOtpEnabled(isEmailValid && isPasswordValid);
     };
 
     return (
@@ -34,7 +41,12 @@ export default function Index() {
                     style={styles.textInput}
                     placeholder="lan@gmail.com"
                     placeholderTextColor="#1c4695"
+                    onChangeText={(text) => validateForm(text, password)}
+                    value={email}
                 />
+                {!emailRegex.test(email) && email.length > 0 && (
+                    <Text style={{ color: "red", marginBottom: 12 }}>Invalid email format</Text>
+                )}
 
                 <View style={styles.passwordContainer}>
                     <TextInput
@@ -42,7 +54,7 @@ export default function Index() {
                         placeholder="Examplepassword#"
                         placeholderTextColor="#1c4695"
                         secureTextEntry={!isPasswordVisible}
-                        onChangeText={validatePassword}
+                        onChangeText={(text) => validateForm(email, text)}
                         value={password}
                     />
                     {password.length > 0 && (
@@ -75,7 +87,7 @@ export default function Index() {
                 })}
 
                 <View style={styles.buttonContainer}>
-                    <Button title="Send OTP" color="#1c4695" disabled={!isOtpEnabled} />
+                    <Button title="Send OTP" color="#1c4695" disabled={!isOtpEnabled} onPress={() => router.push("/otp")} />
                 </View>
             </View>
         </View>
