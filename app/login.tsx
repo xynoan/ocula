@@ -1,15 +1,17 @@
-// TODO: Implement "Remember Me" and "Forgot Password" features
+// TODO: Implement "Remember Me" feature
 import React, { useState } from "react";
-import { View, Text, StyleSheet, StatusBar, Button, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, StatusBar, Button, TextInput, Alert, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import RadioGroup from "react-native-radio-buttons-group";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebaseConfig"; 
+import { auth } from "../firebaseConfig";
 
 export default function Index() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const router = useRouter();
 
   const radioButtons = [
@@ -20,7 +22,7 @@ export default function Index() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       Alert.alert("Login Successful!");
-      router.push("/home"); 
+      router.push("/home");
     } catch (error) {
       Alert.alert("Error", (error as Error).message);
     }
@@ -37,7 +39,7 @@ export default function Index() {
         <View style={styles.loginBox__content}>
           <Text style={styles.loginBox__content__accountText}>Do not have an account yet?</Text>
           <View style={styles.buttonContainer}>
-            <Button title="Let's go!" color="#1c4695" onPress={() => router.push("/register")}/>
+            <Button title="Let's go!" color="#1c4695" onPress={() => router.push("/register")} />
           </View>
         </View>
       </View>
@@ -47,21 +49,35 @@ export default function Index() {
           <Text style={styles.headerText}>CIRCLE</Text>
         </View>
         <View style={styles.loginBox__content}>
-        <TextInput
+          <TextInput
             style={styles.textInput}
             placeholder="Email"
             placeholderTextColor="#1c4695"
             value={email}
             onChangeText={setEmail}
           />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Password"
-            placeholderTextColor="#1c4695"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Password"
+              placeholderTextColor="#1c4695"
+              secureTextEntry={!isPasswordVisible}
+              onChangeText={setPassword}
+              value={password}
+            />
+            {password.length > 0 && (
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              >
+                <Ionicons
+                  name={isPasswordVisible ? "eye-off" : "eye"}
+                  size={24}
+                  color="#1c4695"
+                />
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.radioContainer}>
             <RadioGroup
               radioButtons={radioButtons}
@@ -70,7 +86,7 @@ export default function Index() {
             />
           </View>
 
-          <Text style={{ textDecorationLine: "underline" }}>Forgot Password?</Text>
+          <Text style={{ textDecorationLine: "underline" }} onPress={() => router.push("/forgotPassword")}>Forgot Password?</Text>
           <View style={styles.buttonContainer}>
             <Button title="Log in" color="#1c4695" onPress={handleLogin} />
           </View>
@@ -131,5 +147,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 10,
     alignItems: "flex-start",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative"
+  },
+  eyeIcon: {
+    right: 20,
+    bottom: 22,
+    position: "absolute"
   },
 });

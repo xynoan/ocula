@@ -39,6 +39,7 @@ export default function Index() {
             const signInMethods = await fetchSignInMethodsForEmail(auth, email);
             if (signInMethods.length > 0) {
                 Alert.alert("Sorry!", "Email is already registered.");
+                setEmail("");
                 return;
             }
     
