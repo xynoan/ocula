@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TextInput, Button, Alert, TouchableOpacity } fr
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import app from "../firebaseConfig";
-import { IPV4_ADDRESS } from '@env';
 
 export default function Index() {
     const router = useRouter();
@@ -34,7 +33,7 @@ export default function Index() {
         }
 
         try {
-            const response = await fetch(`http://${IPV4_ADDRESS}:5000/verify-otp`, { 
+            const response = await fetch(`http://${process.env.IPV4_ADDRESS}:5000/verify-otp`, { 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, otp }),
@@ -71,7 +70,7 @@ export default function Index() {
         try {
             setResendDisabled(true);
 
-            const response = await fetch(`http://${IPV4_ADDRESS}:5000/send-otp`, {
+            const response = await fetch(`http://${process.env.IPV4_ADDRESS}:5000/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: userEmail }),

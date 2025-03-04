@@ -2,7 +2,6 @@ import { useState } from "react";
 import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { IPV4_ADDRESS } from '@env';
 import { getAuth, fetchSignInMethodsForEmail } from "firebase/auth";
 
 export default function Index() {
@@ -43,7 +42,7 @@ export default function Index() {
                 return;
             }
     
-            const response = await fetch(`http://${IPV4_ADDRESS}:5000/send-otp`, {
+            const response = await fetch(`http://${process.env.IPV4_ADDRESS}:5000/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
