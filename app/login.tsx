@@ -6,7 +6,7 @@ import RadioGroup from "react-native-radio-buttons-group";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebaseConfig";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export default function Index() {
   const [email, setEmail] = useState("");
