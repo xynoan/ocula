@@ -1,11 +1,12 @@
 // TODO: Implement "Remember Me" feature
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, StatusBar, Button, TextInput, Alert, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import RadioGroup from "react-native-radio-buttons-group";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebaseConfig";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Index() {
   const [email, setEmail] = useState("");
@@ -18,10 +19,41 @@ export default function Index() {
     { id: "yes", label: "Remember Me", value: "remember" },
   ];
 
+  useEffect(() => {
+    const checkRememberedUser = async () => {
+      const savedEmail = await AsyncStorage.getItem("email");
+      const savedPassword = await AsyncStorage.getItem("password");
+
+      if (savedEmail && savedPassword) {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        autoLogin(savedEmail, savedPassword);
+      }
+    };
+    checkRememberedUser();
+  }, []);
+
+  const autoLogin = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/home");
+    } catch (error) {
+      console.log("Auto-login failed:", error);
+    }
+  };
+
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       Alert.alert("Login Successful!");
+
+      if (selectedId === "yes") {
+        await AsyncStorage.setItem("email", email);
+        await AsyncStorage.setItem("password", password);
+      } else {
+        await AsyncStorage.removeItem("email");
+        await AsyncStorage.removeItem("password");
+      }
       router.push("/home");
     } catch (error) {
       Alert.alert("Error", (error as Error).message);
