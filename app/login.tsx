@@ -56,7 +56,7 @@ export default function Index() {
       }
       router.push("/home");
     } catch (error) {
-      Alert.alert("Error", (error as Error).message);
+      Alert.alert("Oops!", "Invalid email or password. Please try again.");
     }
   };
 
