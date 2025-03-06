@@ -1,4 +1,8 @@
-import { ScrollView, View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { ScrollView, View, Text, Image, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { signOut } from "firebase/auth";
+import { auth } from "../../firebaseConfig";
+import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const profile = {
     fullName: "John Doe",
@@ -9,6 +13,17 @@ const profile = {
 };
 
 export default function ProfileScreen() {
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            await AsyncStorage.removeItem("email");
+            await AsyncStorage.removeItem("password");
+            Alert.alert('Success', 'You have been logged out.');
+            router.replace("/login");
+        } catch (error) {
+            Alert.alert('Error', 'Failed to logout. Please try again.');
+        }
+    };
     return (
         <ScrollView style={styles.profileContainer}>
             <View style={styles.section}>
@@ -26,7 +41,7 @@ export default function ProfileScreen() {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Account Management</Text>
                 <TouchableOpacity style={styles.actionButton}><Text style={styles.actionText}>Delete Account</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}><Text style={styles.actionText}>Logout</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={handleLogout}><Text style={styles.actionText}>Logout</Text></TouchableOpacity>
             </View>
         </ScrollView>
     );
