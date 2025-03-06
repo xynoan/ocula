@@ -1,5 +1,6 @@
+// TODO(fix): process.env not working 
 import { useState } from "react";
-import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth, fetchSignInMethodsForEmail } from "firebase/auth";
@@ -10,6 +11,7 @@ export default function Index() {
     const [password, setPassword] = useState("");
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isOtpEnabled, setIsOtpEnabled] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -33,6 +35,7 @@ export default function Index() {
     
 
     const sendOtp = async () => {
+        setLoading(true);
         try {
             const auth = getAuth();
             const signInMethods = await fetchSignInMethodsForEmail(auth, email);
@@ -42,7 +45,7 @@ export default function Index() {
                 return;
             }
     
-            const response = await fetch(`http://${process.env.IPV4_ADDRESS}:5000/send-otp`, {
+            const response = await fetch(`https://mobile-app-ah8n.onrender.com/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
@@ -57,6 +60,8 @@ export default function Index() {
             }
         } catch (error) {
             Alert.alert("Error", "Network error. Try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -119,7 +124,17 @@ export default function Index() {
                 })}
 
                 <View style={styles.buttonContainer}>
-                    <Button title="Send OTP" color="#1c4695" disabled={!isOtpEnabled} onPress={sendOtp} />
+                    <TouchableOpacity 
+                        style={[styles.sendOtpButton, (loading || !isOtpEnabled) && styles.buttonDisabled]}
+                        onPress={sendOtp}
+                        disabled={loading || !isOtpEnabled}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Send OTP</Text>
+                        )}
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -178,5 +193,20 @@ const styles = StyleSheet.create({
     text: {
         color: "#1c4695",
         marginBottom: 10
+    },
+    sendOtpButton: {
+        backgroundColor: "#1c4695",
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        width: "100%",
+    },
+    buttonDisabled: {
+        opacity: 0.7,
+    },
+    buttonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
     },
 });

@@ -1,6 +1,5 @@
-// TODO: Implement "Remember Me" feature
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, StatusBar, Button, TextInput, Alert, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, StatusBar, TextInput, TouchableOpacity, Alert, ActivityIndicator, Button } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import RadioGroup from "react-native-radio-buttons-group";
 import { useRouter } from "expo-router";
@@ -13,6 +12,7 @@ export default function Index() {
   const [password, setPassword] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const radioButtons = [
@@ -34,15 +34,19 @@ export default function Index() {
   }, []);
 
   const autoLogin = async (email: string, password: string) => {
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/home");
     } catch (error) {
       console.log("Auto-login failed:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       Alert.alert("Login Successful!");
@@ -57,6 +61,8 @@ export default function Index() {
       router.push("/home");
     } catch (error) {
       Alert.alert("Oops!", "Invalid email or password. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,7 +126,17 @@ export default function Index() {
 
           <Text style={{ textDecorationLine: "underline" }} onPress={() => router.push("/forgotPassword")}>Forgot Password?</Text>
           <View style={styles.buttonContainer}>
-            <Button title="Log in" color="#1c4695" onPress={handleLogin} />
+            <TouchableOpacity 
+              style={[styles.loginButton, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Log in</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -189,5 +205,20 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 22,
     position: "absolute"
+  },
+  loginButton: {
+    backgroundColor: "#1c4695",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    width: "100%",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

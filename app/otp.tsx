@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, Button, Alert, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TextInput, Button, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import app from "../firebaseConfig";
@@ -12,6 +12,7 @@ export default function Index() {
     const userPassword = Array.isArray(password) ? password[0] : password;
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(30);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -32,8 +33,9 @@ export default function Index() {
             return;
         }
 
+        setLoading(true);
         try {
-            const response = await fetch(`http://${process.env.IPV4_ADDRESS}:5000/verify-otp`, { 
+            const response = await fetch(`https://mobile-app-ah8n.onrender.com/verify-otp`, { 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, otp }),
@@ -55,14 +57,24 @@ export default function Index() {
                     return;
                 }
 
-                await createUserWithEmailAndPassword(auth, userEmail, userPassword);
-                Alert.alert("Success", "Account created!");
-                router.push("/login");
+                const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
+                Alert.alert(
+                    "Account Created",
+                    "Let's set up your profile!",
+                    [
+                        {
+                            text: "OK",
+                            onPress: () => router.push("/profile-setup")
+                        }
+                    ]
+                );
             } else {
                 Alert.alert("Error", "Invalid OTP.");
             }
         } catch (error) {
             Alert.alert("Error", "Network error. Try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -70,7 +82,7 @@ export default function Index() {
         try {
             setResendDisabled(true);
 
-            const response = await fetch(`http://${process.env.IPV4_ADDRESS}:5000/send-otp`, {
+            const response = await fetch(`https://mobile-app-ah8n.onrender.com/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: userEmail }),
@@ -93,7 +105,7 @@ export default function Index() {
     return (
         <View style={styles.container}>
             <View style={styles.otpContainer}>
-                <Text style={[styles.otpContainer__headerText, styles.centerText, styles.text]}>We’ve sent OTP Code</Text>
+                <Text style={[styles.otpContainer__headerText, styles.centerText, styles.text]}>We've sent OTP Code</Text>
                 <Text style={[styles.text, styles.centerText]}>Enter the 6 digit verification code that was sent to your email.</Text>
                 <Text style={{ color: "#1c4695", marginBottom: 10, fontWeight: "bold" }}>Enter 6-digit Code</Text>
                 <TextInput
@@ -105,7 +117,17 @@ export default function Index() {
                     value={otp}
                 />
                 <View style={styles.buttonContainer}>
-                    <Button title="Submit" color="#1c4695" onPress={verifyOtp} />
+                    <TouchableOpacity 
+                        style={[styles.submitButton, loading && styles.buttonDisabled]}
+                        onPress={verifyOtp}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Submit</Text>
+                        )}
+                    </TouchableOpacity>
                 </View>
                 <TouchableOpacity
                     onPress={resendOtp}
@@ -163,5 +185,20 @@ const styles = StyleSheet.create({
     text: {
         color: "#1c4695",
         marginBottom: 10
+    },
+    submitButton: {
+        backgroundColor: "#1c4695",
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        width: "100%",
+    },
+    buttonDisabled: {
+        opacity: 0.7,
+    },
+    buttonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
     },
 })
