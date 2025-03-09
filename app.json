@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Oculus",
+    "name": "Ocula",
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,9 +14,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/Ocula_Logo.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#233580"
       },
-      "package": "com.xynoan.oculus"
+      "package": "com.xynoan.ocula"
     },
     "web": {
       "bundler": "metro",
@@ -28,7 +28,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/Ocula_Logo.png",
+          "image": "./assets/images/splash-icon-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

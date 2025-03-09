@@ -28,7 +28,7 @@ export default function Index() {
       <StatusBar backgroundColor="#f2f2f2" barStyle="dark-content" />
       <Animated.View style={{ transform: [{ translateX: slideAnim }] }}>
         <Image
-          source={require("../assets/images/Ocula_Logo.png")}
+          source={require("../assets/images/splash-icon-light.png")}
           style={styles.logo}
           resizeMode="contain"
         />

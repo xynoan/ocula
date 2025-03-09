@@ -31,6 +31,8 @@ export default function Index() {
         }
     };
 
+    const iconStyle = { width: 40, height: 40 };
+
     return (
         <View style={styles.container}>
             <Animated.View style={[styles.screenContainer, activeScreen === "camera" ? styles.cameraBackground : null]}>
@@ -47,7 +49,7 @@ export default function Index() {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.iconContainer, activeScreen === "shield" && styles.activeIcon]} onPress={() => openScreen("shield")}>
-                    <Image style={{ height: 50, width: 40, tintColor: "#fffeff" }} source={require('../assets/images/shield.png')} />
+                    <Image style={iconStyle} source={require('../assets/images/shield.png')} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.iconContainer, activeScreen === "person" && styles.activeIcon]} onPress={() => openScreen("person")}>
@@ -62,7 +64,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, alignItems: "center", backgroundColor: "#fff" },
     screenContainer: { flex: 1, justifyContent: "center", alignItems: "center", width: "100%", position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#d2fffa" },
     cameraBackground: { backgroundColor: "#ffffff" },
-    bottomContainer: { position: "absolute", bottom: 0, width: "100%", backgroundColor: "#d2fffa", flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 15 },
+    bottomContainer: { position: "absolute", bottom: 0, width: "100%", backgroundColor: "#d2fffa", flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 15, borderRadius: 40 },
     iconContainer: { padding: 10, backgroundColor: "#8bd5cc", borderRadius: 40, alignItems: "center", justifyContent: "center" },
     activeIcon: { backgroundColor: "#214297" },
 });
