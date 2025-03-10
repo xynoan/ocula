@@ -16,9 +16,9 @@ export default function Index() {
     const [userSelectedScreen, setUserSelectedScreen] = useState<keyof typeof screens | null>(null);
 
     const handleSheetChange = useCallback((index: number) => {
-        console.log("handleSheetChange", index);
         if (index === 0) {
             setActiveScreen("camera");
+            setUserSelectedScreen(null);
         } else if (index === 1 && userSelectedScreen === null) {
             setActiveScreen("images");
         }
