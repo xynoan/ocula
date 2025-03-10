@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useMemo, useState } from "react";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { StyleSheet, Animated, TouchableOpacity, Image, Text, View } from "react-native";
+import { StyleSheet, Animated, TouchableOpacity, View, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import CameraScreen from "./screens/CameraScreen";
 import ImagesScreen from "./screens/ImagesScreen";
@@ -13,20 +13,19 @@ export default function Index() {
     const slideAnim = useRef(new Animated.Value(1000)).current;
     const sheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["15%", "100%"], []);
+    const [userSelectedScreen, setUserSelectedScreen] = useState<keyof typeof screens | null>(null);
 
     const handleSheetChange = useCallback((index: number) => {
         console.log("handleSheetChange", index);
         if (index === 0) {
             setActiveScreen("camera");
-        } else {
+        } else if (index === 1 && userSelectedScreen === null) {
             setActiveScreen("images");
         }
-    }, []);
+    }, [userSelectedScreen]);
+
     const handleSnapPress = useCallback((index: number) => {
         sheetRef.current?.snapToIndex(index);
-    }, []);
-    const handleClosePress = useCallback(() => {
-        sheetRef.current?.close();
     }, []);
 
     const screens = {
@@ -37,6 +36,7 @@ export default function Index() {
     };
 
     const openScreen = (screen: keyof typeof screens) => {
+        setUserSelectedScreen(screen);
         setActiveScreen(screen);
         slideAnim.setValue(1000);
         Animated.timing(slideAnim, {
