@@ -1,4 +1,5 @@
 // TODO: add change password
+// TODO: replicate UI from canva
 import { ScrollView, View, Text, Image, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { signOut, deleteUser } from "firebase/auth";
 import { auth } from "../../firebaseConfig";
