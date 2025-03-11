@@ -39,6 +39,24 @@ export default function ShieldScreen() {
         }
     };
 
+    // Delete Registered Face
+    const deleteFace = (index: number) => {
+        Alert.alert(
+            "Delete Face",
+            "Are you sure you want to remove this face?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => {
+                        setRegisteredFaces((prevFaces) => prevFaces.filter((_, i) => i !== index));
+                    },
+                },
+            ]
+        );
+    };
+
     // Toggle Camera Type (Front/Back)
     const switchCamera = () => {
         setCameraType((prevType) => (prevType === 'back' ? 'front' : 'back'));
@@ -52,12 +70,15 @@ export default function ShieldScreen() {
                     <Ionicons name="person" size={40} color="#5b7084" />
                     <View style={{ alignItems: "flex-start" }}>
                         <Text style={styles.faceTitle}>Registered Faces</Text>
+                        <Text style={styles.instructionText}>Hold a face to delete it</Text>
                         <View style={styles.faceList}>
                             {registeredFaces.length === 0 ? (
-                                <Text style={{ color: "#5b7084" }}>No faces registered</Text>
+                                <Text style={{ color: "red" }}>No faces registered</Text>
                             ) : (
                                 registeredFaces.map((uri, index) => (
-                                    <Image key={index} source={{ uri }} style={styles.faceImage} />
+                                    <TouchableOpacity key={index} onLongPress={() => deleteFace(index)}>
+                                        <Image source={{ uri }} style={styles.faceImage} />
+                                    </TouchableOpacity>
                                 ))
                             )}
                         </View>
@@ -137,4 +158,5 @@ const styles = StyleSheet.create({
     cameraContainer: { flex: 1, width: "100%", height: 300, borderRadius: 20, overflow: "hidden" },
     camera: { flex: 1, justifyContent: "flex-end" },
     cameraControls: { flexDirection: "row", justifyContent: "space-between", padding: 20, backgroundColor: "rgba(0,0,0,0.5)" },
+    instructionText: { fontSize: 12, color: "#5b7084", marginTop: 2 },
 });
