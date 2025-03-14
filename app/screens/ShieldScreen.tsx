@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useRef } from "react";
-import { Camera, CameraType, useCameraPermissions, CameraView } from "expo-camera";
+import { CameraType, useCameraPermissions, CameraView } from "expo-camera";
 
 export default function ShieldScreen() {
     const [isEntranceEnabled, setIsEntranceEnabled] = useState(true);

@@ -21,7 +21,7 @@ export default function Index() {
     }).start(() => {
       router.replace("/login");
     });
-  }, []);
+  }, [slideAnim, router]);
 
   return (
     <View style={styles.container}>

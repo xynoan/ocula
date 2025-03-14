@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, Button, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { View, Text, StyleSheet, TextInput, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import app from "../firebaseConfig";
 
 export default function Index() {
     const router = useRouter();
     const { email, password } = useLocalSearchParams();
     const [otp, setOtp] = useState("");
     const userEmail = Array.isArray(email) ? email[0] : email;
-    const userPassword = Array.isArray(password) ? password[0] : password;
     const [resendDisabled, setResendDisabled] = useState(false);
     const [resendTimer, setResendTimer] = useState(30);
     const [loading, setLoading] = useState(false);
@@ -45,8 +42,6 @@ export default function Index() {
             console.log("Verification Response:", data);
 
             if (data.success) {
-                const auth = getAuth(app);
-
                 if (!email || Array.isArray(email)) {
                     Alert.alert("Error", "Invalid email format");
                     return;
@@ -57,7 +52,6 @@ export default function Index() {
                     return;
                 }
 
-                const userCredential = await createUserWithEmailAndPassword(auth, userEmail, userPassword);
                 Alert.alert(
                     "Account Created",
                     "Let's set up your profile!",
@@ -72,6 +66,7 @@ export default function Index() {
                 Alert.alert("Error", "Invalid OTP.");
             }
         } catch (error) {
+            console.log(error);
             Alert.alert("Error", "Network error. Try again.");
         } finally {
             setLoading(false);
@@ -97,6 +92,7 @@ export default function Index() {
                 setResendDisabled(false);
             }
         } catch (error) {
+            console.log(error);
             Alert.alert("Error", "Network error. Try again.");
             setResendDisabled(false);
         }

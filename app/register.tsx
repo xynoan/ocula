@@ -1,6 +1,6 @@
 // TODO(fix): process.env not working 
 import { useState } from "react";
-import { View, Text, StyleSheet, StatusBar, Button, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, StatusBar, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth, fetchSignInMethodsForEmail } from "firebase/auth";
@@ -59,6 +59,7 @@ export default function Index() {
                 Alert.alert("Error", "Failed to send OTP.");
             }
         } catch (error) {
+            console.log(error);
             Alert.alert("Error", "Network error. Try again.");
         } finally {
             setLoading(false);

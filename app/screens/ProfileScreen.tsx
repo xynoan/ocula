@@ -6,7 +6,7 @@ import { auth } from "../../firebaseConfig";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
-import { getFirestore, doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, deleteDoc } from "firebase/firestore";
 import app from "../../firebaseConfig";
 
 interface ProfileData {
@@ -41,6 +41,7 @@ export default function ProfileScreen() {
                 router.replace("/profile-setup");
             }
         } catch (error) {
+            console.log(error);
             Alert.alert('Error', 'Failed to load profile');
         } finally {
             setLoading(false);
@@ -55,6 +56,7 @@ export default function ProfileScreen() {
             Alert.alert('Success', 'You have been logged out.');
             router.replace("/login");
         } catch (error) {
+            console.log(error);
             Alert.alert('Error', 'Failed to logout. Please try again.');
         }
     };
@@ -133,6 +135,7 @@ export default function ProfileScreen() {
                                                 router.replace('/login');
                                             }
                                         } catch (error) {
+                                            console.log(error);
                                             Alert.alert('Error', 'Failed to delete account. Please try again.');
                                         }
                                     }

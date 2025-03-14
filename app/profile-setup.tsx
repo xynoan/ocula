@@ -19,15 +19,6 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import app from '../firebaseConfig';
 
-interface UserData {
-    fullName: string;
-    phoneNumber: string;
-    email: string | null;
-    profilePicture: string | null;
-    updatedAt: string;
-    createdAt?: string;
-}
-
 export default function ProfileSetup() {
     const [fullName, setFullName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -82,6 +73,7 @@ export default function ProfileSetup() {
             }
         } catch (error) {
             Alert.alert('Error', 'Failed to pick image');
+            console.log(error);
         }
     };
 
@@ -143,6 +135,7 @@ export default function ProfileSetup() {
             );
         } catch (error) {
             Alert.alert('Error', 'Failed to save profile. Please try again.');
+            console.log(error);
         } finally {
             setLoading(false);
         }

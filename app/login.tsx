@@ -18,8 +18,20 @@ export default function Index() {
   const radioButtons = [
     { id: "yes", label: "Remember Me", value: "remember" },
   ];
-
+  
   useEffect(() => {
+    const autoLogin = async (email: string, password: string) => {
+      setLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        router.push("/home");
+      } catch (error) {
+        console.log("Auto-login failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const checkRememberedUser = async () => {
       const savedEmail = await AsyncStorage.getItem("email");
       const savedPassword = await AsyncStorage.getItem("password");
@@ -31,19 +43,7 @@ export default function Index() {
       }
     };
     checkRememberedUser();
-  }, []);
-
-  const autoLogin = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/home");
-    } catch (error) {
-      console.log("Auto-login failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [router]);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -60,6 +60,7 @@ export default function Index() {
       }
       router.push("/home");
     } catch (error) {
+      console.log(error);
       Alert.alert("Oops!", "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
