@@ -19,6 +19,10 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+app.get("/", (req, res) => {
+    res.json({ Success: "Web Server Live!" });
+})
+
 app.post("/send-otp", async (req, res) => {
     const { email } = req.body;
     const otp = Math.floor(100000 + Math.random() * 900000);
