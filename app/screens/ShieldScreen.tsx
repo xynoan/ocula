@@ -2,10 +2,11 @@
 import 'react-native-get-random-values';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { CameraType, useCameraPermissions, CameraView } from "expo-camera";
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { RekognitionClient, IndexFacesCommand, SearchFacesByImageCommand, DeleteFacesCommand } from "@aws-sdk/client-rekognition";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { RekognitionClient, IndexFacesCommand, SearchFacesByImageCommand, DeleteFacesCommand, ListFacesCommand } from "@aws-sdk/client-rekognition";
 import uuid from "react-native-uuid";
 const Buffer = require('buffer/').Buffer;
 // AWS Configuration
@@ -239,14 +240,35 @@ export default function ShieldScreen() {
 
                 // All criteria met, save the face
                 if (faceDetectionResult.faceId) {
-                    setRegisteredFaces(prev => [
-                        ...prev,
-                        {
-                            id: faceDetectionResult.faceId,
-                            uri: photo?.uri || '',
-                            s3Key: imageKey // Store the S3 key for later deletion
-                        }
-                    ]);
+                    try {
+                        // Generate a presigned URL for the newly uploaded image
+                        const getObjectParams = {
+                            Bucket: BUCKET_NAME,
+                            Key: imageKey
+                        };
+                        const command = new GetObjectCommand(getObjectParams);
+                        const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+                        
+                        setRegisteredFaces(prev => [
+                            ...prev,
+                            {
+                                id: faceDetectionResult.faceId,
+                                uri: presignedUrl, // Use the presigned URL
+                                s3Key: imageKey
+                            }
+                        ]);
+                    } catch (presignError) {
+                        console.error("Error generating presigned URL:", presignError);
+                        // Fall back to using the local URI temporarily
+                        setRegisteredFaces(prev => [
+                            ...prev,
+                            {
+                                id: faceDetectionResult.faceId,
+                                uri: photo?.uri || '',
+                                s3Key: imageKey
+                            }
+                        ]);
+                    }
                 }
 
                 setIsProcessing(false);
@@ -318,6 +340,107 @@ export default function ShieldScreen() {
         setCameraType((prevType) => (prevType === 'back' ? 'front' : 'back'));
     };
 
+    // Fetch registered faces
+    const fetchRegisteredFaces = async () => {
+        try {
+            setIsProcessing(true);
+            setProcessingStatus("Fetching registered faces...");
+            
+            const params = {
+                CollectionId: COLLECTION_ID,
+                MaxResults: 100, // Adjust as needed
+            };
+
+            const command = new ListFacesCommand(params);
+            const response = await rekognitionClient.send(command);
+
+            if (response.Faces && response.Faces.length > 0) {
+                const facesPromises = response.Faces.map(async face => {
+                    let presignedUrl = '';
+                    const s3Key = face.ExternalImageId || '';
+                    
+                    if (s3Key) {
+                        try {
+                            // Create command to get the object
+                            const getObjectParams = {
+                                Bucket: BUCKET_NAME,
+                                Key: s3Key
+                            };
+                            const command = new GetObjectCommand(getObjectParams);
+                            
+                            // Generate a presigned URL that expires in 1 hour
+                            presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+                        } catch (presignError) {
+                            console.error("Error generating presigned URL:", presignError);
+                        }
+                    }
+                    
+                    return {
+                        id: face.FaceId || '',
+                        uri: presignedUrl || '', // Use the presigned URL as the URI
+                        s3Key: s3Key
+                    };
+                });
+                
+                const faces = await Promise.all(facesPromises);
+                setRegisteredFaces(faces);
+            }
+
+            setIsProcessing(false);
+        } catch (error) {
+            console.error("Error fetching registered faces:", error);
+            setIsProcessing(false);
+            Alert.alert("Error", "Failed to fetch registered faces. Please try again.");
+        }
+    };
+
+    // Refresh presigned URLs for faces
+    const refreshPresignedUrls = async () => {
+        // Only refresh if we have registered faces
+        if (registeredFaces.length === 0) return;
+        
+        try {
+            const updatedFaces = await Promise.all(
+                registeredFaces.map(async (face) => {
+                    // If we have an s3Key, generate a new presigned URL
+                    if (face.s3Key) {
+                        try {
+                            const getObjectParams = {
+                                Bucket: BUCKET_NAME,
+                                Key: face.s3Key
+                            };
+                            const command = new GetObjectCommand(getObjectParams);
+                            const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+                            
+                            return {
+                                ...face,
+                                uri: presignedUrl
+                            };
+                        } catch (error) {
+                            console.error("Error refreshing presigned URL:", error);
+                            return face; // Return face unchanged if error
+                        }
+                    }
+                    return face; // Return face unchanged if no s3Key
+                })
+            );
+            
+            setRegisteredFaces(updatedFaces);
+        } catch (error) {
+            console.error("Error refreshing presigned URLs:", error);
+        }
+    };
+
+    // Set up an interval to refresh presigned URLs every 50 minutes
+    useEffect(() => {
+        const refreshInterval = setInterval(refreshPresignedUrls, 50 * 60 * 1000);
+        return () => clearInterval(refreshInterval);
+    }, [registeredFaces]);
+
+    useEffect(() => {
+        fetchRegisteredFaces();
+    }, []);
+
     return (
         <View style={styles.securityContainer}>
             {/* Face Registration */}
@@ -343,6 +466,13 @@ export default function ShieldScreen() {
                 <TouchableOpacity style={styles.registerButton} onPress={handleCameraAccess}>
                     <Ionicons name="add-outline" size={40} color="#fff" />
                     <Text style={styles.registerText}>Register New Face</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    onPress={fetchRegisteredFaces} 
+                    style={styles.refreshButton}
+                    activeOpacity={0.6}
+                >
+                    <Ionicons name="refresh" size={24} color="#243483" />
                 </TouchableOpacity>
             </View>
 
@@ -408,7 +538,7 @@ export default function ShieldScreen() {
 
 const styles = StyleSheet.create({
     securityContainer: { flex: 1, alignItems: "flex-start", gap: 15, width: 300, marginTop: 15 },
-    faceContainer: { alignItems: "flex-start", backgroundColor: "#ededf5", borderRadius: 20, overflow: "hidden", width: "100%" },
+    faceContainer: { alignItems: "flex-start", backgroundColor: "#ededf5", borderRadius: 20, overflow: "hidden", width: "100%", position: "relative" },
     faceHeader: { flexDirection: "row", alignItems: "center", padding: 10, gap: 10 },
     faceTitle: { fontSize: 16, fontWeight: "bold", color: "#243483" },
     faceList: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 },
@@ -425,4 +555,21 @@ const styles = StyleSheet.create({
     instructionText: { fontSize: 12, color: "#5b7084", marginTop: 2 },
     processingContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.8)", justifyContent: "center", alignItems: "center" },
     processingText: { marginTop: 10, fontSize: 16, color: "#243483", fontWeight: "bold" },
+    refreshButton: { 
+        position: "absolute", 
+        top: 10, 
+        right: 10, 
+        backgroundColor: "rgba(255,255,255,0.9)", 
+        padding: 8, 
+        borderRadius: 20,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        zIndex: 10
+    },
 });
