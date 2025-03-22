@@ -7,27 +7,20 @@ import { CameraType, useCameraPermissions, CameraView } from "expo-camera";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { RekognitionClient, IndexFacesCommand, SearchFacesByImageCommand, DeleteFacesCommand } from "@aws-sdk/client-rekognition";
 import uuid from "react-native-uuid";
-import { 
-    AWS_REGION, 
-    AWS_ACCESS_KEY_ID, 
-    AWS_SECRET_ACCESS_KEY,
-    AWS_BUCKET_NAME,
-    AWS_COLLECTION_ID
-} from "@env"
 const Buffer = require('buffer/').Buffer;
 // AWS Configuration
 const awsConfig = {
-    region: AWS_REGION,
+    region: process.env.EXPO_PUBLIC_AWS_REGION,
     credentials: {
-        accessKeyId: AWS_ACCESS_KEY_ID,
-        secretAccessKey: AWS_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.EXPO_PUBLIC_AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY || '',
     },
 };
 
 const s3Client = new S3Client(awsConfig);
 const rekognitionClient = new RekognitionClient(awsConfig);
-const BUCKET_NAME = AWS_BUCKET_NAME;
-const COLLECTION_ID = AWS_COLLECTION_ID;
+const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_BUCKET_NAME;    
+const COLLECTION_ID = process.env.EXPO_PUBLIC_AWS_COLLECTION_ID;
 
 export default function ShieldScreen() {
     const [isEntranceEnabled, setIsEntranceEnabled] = useState(true);
