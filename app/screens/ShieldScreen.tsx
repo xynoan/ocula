@@ -21,7 +21,7 @@ const awsConfig = {
 
 const s3Client = new S3Client(awsConfig);
 const rekognitionClient = new RekognitionClient(awsConfig);
-const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_BUCKET_NAME;    
+const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_BUCKET_NAME;
 const COLLECTION_ID = process.env.EXPO_PUBLIC_AWS_COLLECTION_ID;
 
 export default function ShieldScreen() {
@@ -133,14 +133,14 @@ export default function ShieldScreen() {
 
             // Check face quality metrics to help detect photos of photos
             const faceDetail = response.FaceRecords[0].FaceDetail;
-            
+
             // Check if image might be a photo of a photo (anti-spoofing)
             if (faceDetail) {
                 // Check sharpness - photos of photos are typically less sharp
                 if (faceDetail.Quality && faceDetail.Quality.Sharpness && faceDetail.Quality.Sharpness < 50) {
                     return { success: false, error: "Poor image quality detected. Please try again with better lighting." };
                 }
-                
+
                 // Check brightness - photos of photos often have uneven brightness
                 if (faceDetail.Quality && faceDetail.Quality.Brightness && faceDetail.Quality.Brightness < 40) {
                     return { success: false, error: "Low brightness detected. Please try again with better lighting." };
@@ -162,7 +162,7 @@ export default function ShieldScreen() {
     const checkForDuplicate = async (imageKey: string) => {
         try {
             setProcessingStatus("Checking for duplicates...");
-            
+
             // If there are no registered faces yet, we can skip the check
             // This ensures we don't get false positives when the collection might have orphaned records
             if (registeredFaces.length === 0) {
@@ -189,7 +189,7 @@ export default function ShieldScreen() {
                 const otherMatchExists = response.FaceMatches.some(
                     match => match.Face?.ExternalImageId !== imageKey && match.Similarity && match.Similarity > 90
                 );
-                
+
                 if (otherMatchExists) {
                     return { isDuplicate: true };
                 }
@@ -223,22 +223,20 @@ export default function ShieldScreen() {
                 if (!faceDetectionResult.success) {
                     // Delete the image from S3 if criteria not met
                     await deleteFromS3(imageKey);
-                    
+
                     // Also delete the face from Rekognition collection if we have a faceId
                     if (faceDetectionResult.faceId) {
                         try {
-                            const deleteParams = {
+                            await rekognitionClient.send(new DeleteFacesCommand({
                                 CollectionId: COLLECTION_ID,
                                 FaceIds: [faceDetectionResult.faceId]
-                            };
-                            
-                            await rekognitionClient.send(new DeleteFacesCommand(deleteParams));
+                            }));
                         } catch (rekognitionError) {
                             console.error("Error deleting failed face from collection:", rekognitionError);
                             // Continue with the alert even if deletion fails
                         }
                     }
-                    
+
                     setIsProcessing(false);
                     Alert.alert("Registration Failed", faceDetectionResult.error);
                     return;
@@ -250,22 +248,20 @@ export default function ShieldScreen() {
                 if (duplicateCheck.isDuplicate) {
                     // Delete the image from S3 if it's a duplicate
                     await deleteFromS3(imageKey);
-                    
+
                     // Also delete the face from Rekognition collection if we have a faceId
                     if (faceDetectionResult.faceId) {
                         try {
-                            const deleteParams = {
+                            await rekognitionClient.send(new DeleteFacesCommand({
                                 CollectionId: COLLECTION_ID,
                                 FaceIds: [faceDetectionResult.faceId]
-                            };
-                            
-                            await rekognitionClient.send(new DeleteFacesCommand(deleteParams));
+                            }));
                         } catch (rekognitionError) {
                             console.error("Error deleting duplicate face from collection:", rekognitionError);
                             // Continue with the alert even if deletion fails
                         }
                     }
-                    
+
                     setIsProcessing(false);
                     Alert.alert("Registration Failed", "Face is already registered");
                     return;
@@ -275,13 +271,12 @@ export default function ShieldScreen() {
                 if (faceDetectionResult.faceId) {
                     try {
                         // Generate a presigned URL for the newly uploaded image
-                        const getObjectParams = {
+                        const command = new GetObjectCommand({
                             Bucket: BUCKET_NAME,
                             Key: imageKey
-                        };
-                        const command = new GetObjectCommand(getObjectParams);
+                        });
                         const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-                        
+
                         setRegisteredFaces(prev => [
                             ...prev,
                             {
@@ -329,17 +324,17 @@ export default function ShieldScreen() {
                         try {
                             setIsProcessing(true);
                             setProcessingStatus("Deleting face...");
-                            
+
                             const faceToDelete = registeredFaces[index];
-                            
+
                             // 1. Delete from Rekognition collection
                             const deleteParams = {
                                 CollectionId: COLLECTION_ID,
                                 FaceIds: [faceToDelete.id]
                             };
-                            
+
                             await rekognitionClient.send(new DeleteFacesCommand(deleteParams));
-                            
+
                             // 2. Delete from S3 bucket using the stored S3 key
                             if (faceToDelete.s3Key) {
                                 try {
@@ -349,15 +344,15 @@ export default function ShieldScreen() {
                                     // Continue with UI update even if S3 delete fails
                                 }
                             }
-                            
+
                             // 3. Update the UI state
                             setRegisteredFaces((prevFaces) => prevFaces.filter((_, i) => i !== index));
-                            
+
                             setIsProcessing(false);
                         } catch (error) {
                             console.error("Error deleting face:", error);
                             Alert.alert(
-                                "Error", 
+                                "Error",
                                 "Failed to delete face. Please try again."
                             );
                             setIsProcessing(false);
@@ -378,7 +373,7 @@ export default function ShieldScreen() {
         try {
             setIsProcessing(true);
             setProcessingStatus("Fetching registered faces...");
-            
+
             const params = {
                 CollectionId: COLLECTION_ID,
                 MaxResults: 100, // Adjust as needed
@@ -391,7 +386,7 @@ export default function ShieldScreen() {
                 const facesPromises = response.Faces.map(async face => {
                     let presignedUrl = '';
                     const s3Key = face.ExternalImageId || '';
-                    
+
                     if (s3Key) {
                         try {
                             // Create command to get the object
@@ -400,21 +395,21 @@ export default function ShieldScreen() {
                                 Key: s3Key
                             };
                             const command = new GetObjectCommand(getObjectParams);
-                            
+
                             // Generate a presigned URL that expires in 1 hour
                             presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
                         } catch (presignError) {
                             console.error("Error generating presigned URL:", presignError);
                         }
                     }
-                    
+
                     return {
                         id: face.FaceId || '',
                         uri: presignedUrl || '', // Use the presigned URL as the URI
                         s3Key: s3Key
                     };
                 });
-                
+
                 const faces = await Promise.all(facesPromises);
                 setRegisteredFaces(faces);
             }
@@ -431,7 +426,7 @@ export default function ShieldScreen() {
     const refreshPresignedUrls = async () => {
         // Only refresh if we have registered faces
         if (registeredFaces.length === 0) return;
-        
+
         try {
             const updatedFaces = await Promise.all(
                 registeredFaces.map(async (face) => {
@@ -444,7 +439,7 @@ export default function ShieldScreen() {
                             };
                             const command = new GetObjectCommand(getObjectParams);
                             const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-                            
+
                             return {
                                 ...face,
                                 uri: presignedUrl
@@ -457,7 +452,7 @@ export default function ShieldScreen() {
                     return face; // Return face unchanged if no s3Key
                 })
             );
-            
+
             setRegisteredFaces(updatedFaces);
         } catch (error) {
             console.error("Error refreshing presigned URLs:", error);
@@ -500,8 +495,8 @@ export default function ShieldScreen() {
                     <Ionicons name="add-outline" size={40} color="#fff" />
                     <Text style={styles.registerText}>Register New Face</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                    onPress={fetchRegisteredFaces} 
+                <TouchableOpacity
+                    onPress={fetchRegisteredFaces}
                     style={styles.refreshButton}
                     activeOpacity={0.6}
                 >
@@ -588,12 +583,12 @@ const styles = StyleSheet.create({
     instructionText: { fontSize: 12, color: "#5b7084", marginTop: 2 },
     processingContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.8)", justifyContent: "center", alignItems: "center" },
     processingText: { marginTop: 10, fontSize: 16, color: "#243483", fontWeight: "bold" },
-    refreshButton: { 
-        position: "absolute", 
-        top: 10, 
-        right: 10, 
-        backgroundColor: "rgba(255,255,255,0.9)", 
-        padding: 8, 
+    refreshButton: {
+        position: "absolute",
+        top: 10,
+        right: 10,
+        backgroundColor: "rgba(255,255,255,0.9)",
+        padding: 8,
         borderRadius: 20,
         shadowColor: "#000",
         shadowOffset: {
