@@ -75,8 +75,7 @@ export default function ShieldScreen() {
             setProcessingStatus("Uploading image...");
             const base64Data = await imageToBase64(uri);
             const buffer = Buffer.from(base64Data, 'base64');
-            const s3Key = `${imageId}.jpg`;
-            // const s3Key = `faces-${imageId}.jpg`;
+            const s3Key = `faces/${imageId}.jpg`;
 
             const params = {
                 Bucket: BUCKET_NAME,
