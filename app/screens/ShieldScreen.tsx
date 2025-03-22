@@ -1,4 +1,5 @@
 // TODO: make this file modular. Too much code in one file.
+// TODO: use liveness detection instead for anti-spoofing.
 import 'react-native-get-random-values';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
