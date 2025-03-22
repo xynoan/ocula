@@ -233,6 +233,22 @@ export default function ShieldScreen() {
                 if (duplicateCheck.isDuplicate) {
                     // Delete the image from S3 if it's a duplicate
                     await deleteFromS3(imageKey);
+                    
+                    // Also delete the face from Rekognition collection if we have a faceId
+                    if (faceDetectionResult.faceId) {
+                        try {
+                            const deleteParams = {
+                                CollectionId: COLLECTION_ID,
+                                FaceIds: [faceDetectionResult.faceId]
+                            };
+                            
+                            await rekognitionClient.send(new DeleteFacesCommand(deleteParams));
+                        } catch (rekognitionError) {
+                            console.error("Error deleting duplicate face from collection:", rekognitionError);
+                            // Continue with the alert even if deletion fails
+                        }
+                    }
+                    
                     setIsProcessing(false);
                     Alert.alert("Registration Failed", "Face is already registered");
                     return;
