@@ -223,6 +223,22 @@ export default function ShieldScreen() {
                 if (!faceDetectionResult.success) {
                     // Delete the image from S3 if criteria not met
                     await deleteFromS3(imageKey);
+                    
+                    // Also delete the face from Rekognition collection if we have a faceId
+                    if (faceDetectionResult.faceId) {
+                        try {
+                            const deleteParams = {
+                                CollectionId: COLLECTION_ID,
+                                FaceIds: [faceDetectionResult.faceId]
+                            };
+                            
+                            await rekognitionClient.send(new DeleteFacesCommand(deleteParams));
+                        } catch (rekognitionError) {
+                            console.error("Error deleting failed face from collection:", rekognitionError);
+                            // Continue with the alert even if deletion fails
+                        }
+                    }
+                    
                     setIsProcessing(false);
                     Alert.alert("Registration Failed", faceDetectionResult.error);
                     return;
