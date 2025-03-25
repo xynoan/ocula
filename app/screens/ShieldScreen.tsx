@@ -168,8 +168,8 @@ export default function ShieldScreen() {
             if (registeredFaces.length === 0) {
                 return { isDuplicate: false };
             }
-
-            const params = {
+            
+            const response = await rekognitionClient.send(new SearchFacesByImageCommand({
                 CollectionId: COLLECTION_ID,
                 Image: {
                     S3Object: {
@@ -178,11 +178,8 @@ export default function ShieldScreen() {
                     },
                 },
                 MaxFaces: 5,
-                FaceMatchThreshold: 90, // Higher threshold to avoid false positives
-            };
-
-            const command = new SearchFacesByImageCommand(params);
-            const response = await rekognitionClient.send(command);
+                FaceMatchThreshold: 90,
+            }));
 
             if (response.FaceMatches && response.FaceMatches.length > 0) {
                 // For a face to be considered a duplicate, it must be a very high match
