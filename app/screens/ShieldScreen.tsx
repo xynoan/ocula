@@ -1,28 +1,22 @@
-// TODO: make this file modular. Too much code in one file.
 // TODO: use liveness detection instead for anti-spoofing.
 import 'react-native-get-random-values';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert, ActivityIndicator } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useRef, useEffect } from "react";
-import { CameraType, useCameraPermissions, CameraView } from "expo-camera";
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+// AWS config
+import { s3Client, BUCKET_NAME, COLLECTION_ID, rekognitionClient } from "./aws/config";
+// AWS S3 - storage
+import { uploadToS3, deleteFromS3, refreshPresignedUrls, fetchRegisteredFaces } from "./aws/s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { RekognitionClient, IndexFacesCommand, SearchFacesByImageCommand, DeleteFacesCommand, ListFacesCommand } from "@aws-sdk/client-rekognition";
+// AWS Rekognition - face detection
+import { DeleteFacesCommand } from "@aws-sdk/client-rekognition";
+// Camera
+import { CameraType, useCameraPermissions, CameraView } from "expo-camera";
+// Icons
+import { Ionicons } from "@expo/vector-icons";
+// UUID - unique id
 import uuid from "react-native-uuid";
-const Buffer = require('buffer/').Buffer;
-// AWS Configuration
-const awsConfig = {
-    region: process.env.EXPO_PUBLIC_AWS_REGION,
-    credentials: {
-        accessKeyId: process.env.EXPO_PUBLIC_AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.EXPO_PUBLIC_AWS_SECRET_ACCESS_KEY || '',
-    },
-};
-
-const s3Client = new S3Client(awsConfig);
-const rekognitionClient = new RekognitionClient(awsConfig);
-const BUCKET_NAME = process.env.EXPO_PUBLIC_AWS_BUCKET_NAME;
-const COLLECTION_ID = process.env.EXPO_PUBLIC_AWS_COLLECTION_ID;
+import { checkForDuplicate, deleteFace, detectFaces } from './aws/rekognition';
 
 export default function ShieldScreen() {
     const [isEntranceEnabled, setIsEntranceEnabled] = useState(true);
@@ -35,11 +29,9 @@ export default function ShieldScreen() {
     const [processingStatus, setProcessingStatus] = useState("");
     const cameraRef = useRef<CameraView>(null);
 
-    // Toggle Functions
     const toggleEntrance = () => setIsEntranceEnabled((prev) => !prev);
     const toggleEntity = () => setIsEntityEnabled((prev) => !prev);
 
-    // Handle Camera Access
     const handleCameraAccess = async () => {
         if (!permission?.granted) {
             await requestPermission();
@@ -47,161 +39,6 @@ export default function ShieldScreen() {
         setIsCameraActive(true);
     };
 
-    // Convert image to base64
-    const imageToBase64 = async (uri: string) => {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const base64 = reader.result?.toString().split(',')[1];
-                resolve(base64 || '');
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    };
-
-    // Upload image to S3
-    const uploadToS3 = async (uri: string, imageId: string) => {
-        try {
-            setProcessingStatus("Uploading image...");
-            const base64Data = await imageToBase64(uri);
-            const buffer = Buffer.from(base64Data, 'base64');
-            const s3Key = `${imageId}.jpg`;
-
-            const params = {
-                Bucket: BUCKET_NAME,
-                Key: s3Key,
-                Body: buffer,
-                ContentType: 'image/jpeg',
-            };
-
-            await s3Client.send(new PutObjectCommand(params));
-            return s3Key;
-        } catch (error) {
-            console.error("Error uploading to S3:", error);
-            throw error;
-        }
-    };
-
-    // Delete image from S3
-    const deleteFromS3 = async (key: string) => {
-        try {
-            const params = {
-                Bucket: BUCKET_NAME,
-                Key: key,
-            };
-            await s3Client.send(new DeleteObjectCommand(params));
-        } catch (error) {
-            console.error("Error deleting from S3:", error);
-        }
-    };
-
-    // Check for face in image using Rekognition
-    const detectFaces = async (imageKey: string) => {
-        try {
-            setProcessingStatus("Looking for faces...");
-
-            const params = {
-                Image: {
-                    S3Object: {
-                        Bucket: BUCKET_NAME,
-                        Name: imageKey,
-                    },
-                },
-                Attributes: ["ALL"], // Request all attributes to perform additional checks
-            };
-
-            const command = new IndexFacesCommand({
-                CollectionId: COLLECTION_ID,
-                Image: params.Image,
-                MaxFaces: 10, // We want to know if there are multiple faces
-                ExternalImageId: imageKey,
-                DetectionAttributes: ["ALL"], // Request quality and other attributes
-            });
-
-            const response = await rekognitionClient.send(command);
-
-            if (!response.FaceRecords || response.FaceRecords.length === 0) {
-                return { success: false, error: "No face detected" };
-            }
-
-            if (response.FaceRecords.length > 1) {
-                return { success: false, error: "Multiple faces detected" };
-            }
-
-            // Check face quality metrics to help detect photos of photos
-            const faceDetail = response.FaceRecords[0].FaceDetail;
-
-            // Check if image might be a photo of a photo (anti-spoofing)
-            if (faceDetail) {
-                // Check sharpness - photos of photos are typically less sharp
-                if (faceDetail.Quality && faceDetail.Quality.Sharpness && faceDetail.Quality.Sharpness < 50) {
-                    return { success: false, error: "Poor image quality detected. Please try again with better lighting." };
-                }
-
-                // Check brightness - photos of photos often have uneven brightness
-                if (faceDetail.Quality && faceDetail.Quality.Brightness && faceDetail.Quality.Brightness < 40) {
-                    return { success: false, error: "Low brightness detected. Please try again with better lighting." };
-                }
-            }
-
-            return {
-                success: true,
-                faceId: response.FaceRecords[0].Face?.FaceId || "",
-                imageKey
-            };
-        } catch (error) {
-            console.error("Error detecting faces:", error);
-            throw error;
-        }
-    };
-
-    // Check if face already exists
-    const checkForDuplicate = async (imageKey: string) => {
-        try {
-            setProcessingStatus("Checking for duplicates...");
-
-            // If there are no registered faces yet, we can skip the check
-            // This ensures we don't get false positives when the collection might have orphaned records
-            if (registeredFaces.length === 0) {
-                return { isDuplicate: false };
-            }
-            
-            const response = await rekognitionClient.send(new SearchFacesByImageCommand({
-                CollectionId: COLLECTION_ID,
-                Image: {
-                    S3Object: {
-                        Bucket: BUCKET_NAME,
-                        Name: imageKey,
-                    },
-                },
-                MaxFaces: 5,
-                FaceMatchThreshold: 90,
-            }));
-
-            if (response.FaceMatches && response.FaceMatches.length > 0) {
-                // For a face to be considered a duplicate, it must be a very high match
-                const otherMatchExists = response.FaceMatches.some(
-                    match => match.Face?.ExternalImageId !== imageKey && match.Similarity && match.Similarity > 90
-                );
-
-                if (otherMatchExists) {
-                    return { isDuplicate: true };
-                }
-            }
-
-            return { isDuplicate: false };
-        } catch (error) {
-            // This error might occur if the face was just added but not yet searchable
-            // We'll consider it not a duplicate in this case
-            console.error("Error checking for duplicate:", error);
-            return { isDuplicate: false };
-        }
-    };
-
-    // Capture Image and Register Face
     const captureFace = async () => {
         if (cameraRef.current) {
             try {
@@ -212,10 +49,10 @@ export default function ShieldScreen() {
                 const imageId = uuid.v4().toString();
 
                 // Step 1: Upload to S3
-                const imageKey = await uploadToS3(photo?.uri || '', imageId);
+                const imageKey = await uploadToS3(photo?.uri || '', imageId, setProcessingStatus);
 
                 // Step 2: Detect faces and check criteria
-                const faceDetectionResult = await detectFaces(imageKey);
+                const faceDetectionResult = await detectFaces(imageKey, setProcessingStatus);
 
                 if (!faceDetectionResult.success) {
                     // Delete the image from S3 if criteria not met
@@ -240,7 +77,7 @@ export default function ShieldScreen() {
                 }
 
                 // Step 3: Check for duplicates
-                const duplicateCheck = await checkForDuplicate(imageKey);
+                const duplicateCheck = await checkForDuplicate(imageKey, registeredFaces, setProcessingStatus);
 
                 if (duplicateCheck.isDuplicate) {
                     // Delete the image from S3 if it's a duplicate
@@ -306,154 +143,10 @@ export default function ShieldScreen() {
             }
         }
     };
-
-    // Delete Registered Face
-    const deleteFace = (index: number) => {
-        Alert.alert(
-            "Delete Face",
-            "Are you sure you want to remove this face?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            setIsProcessing(true);
-                            setProcessingStatus("Deleting face...");
-
-                            const faceToDelete = registeredFaces[index];
-
-                            // 1. Delete from Rekognition collection
-                            const deleteParams = {
-                                CollectionId: COLLECTION_ID,
-                                FaceIds: [faceToDelete.id]
-                            };
-
-                            await rekognitionClient.send(new DeleteFacesCommand(deleteParams));
-
-                            // 2. Delete from S3 bucket using the stored S3 key
-                            if (faceToDelete.s3Key) {
-                                try {
-                                    await deleteFromS3(faceToDelete.s3Key);
-                                } catch (s3Error) {
-                                    console.error("Error deleting from S3:", s3Error);
-                                    // Continue with UI update even if S3 delete fails
-                                }
-                            }
-
-                            // 3. Update the UI state
-                            setRegisteredFaces((prevFaces) => prevFaces.filter((_, i) => i !== index));
-
-                            setIsProcessing(false);
-                        } catch (error) {
-                            console.error("Error deleting face:", error);
-                            Alert.alert(
-                                "Error",
-                                "Failed to delete face. Please try again."
-                            );
-                            setIsProcessing(false);
-                        }
-                    },
-                },
-            ]
-        );
-    };
-
+        
     // Toggle Camera Type (Front/Back)
     const switchCamera = () => {
         setCameraType((prevType) => (prevType === 'back' ? 'front' : 'back'));
-    };
-
-    // Fetch registered faces
-    const fetchRegisteredFaces = async () => {
-        try {
-            setIsProcessing(true);
-            setProcessingStatus("Fetching registered faces...");
-
-            const params = {
-                CollectionId: COLLECTION_ID,
-                MaxResults: 100, // Adjust as needed
-            };
-
-            const command = new ListFacesCommand(params);
-            const response = await rekognitionClient.send(command);
-
-            if (response.Faces && response.Faces.length > 0) {
-                const facesPromises = response.Faces.map(async face => {
-                    let presignedUrl = '';
-                    const s3Key = face.ExternalImageId || '';
-
-                    if (s3Key) {
-                        try {
-                            // Create command to get the object
-                            const getObjectParams = {
-                                Bucket: BUCKET_NAME,
-                                Key: s3Key
-                            };
-                            const command = new GetObjectCommand(getObjectParams);
-
-                            // Generate a presigned URL that expires in 1 hour
-                            presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-                        } catch (presignError) {
-                            console.error("Error generating presigned URL:", presignError);
-                        }
-                    }
-
-                    return {
-                        id: face.FaceId || '',
-                        uri: presignedUrl || '', // Use the presigned URL as the URI
-                        s3Key: s3Key
-                    };
-                });
-
-                const faces = await Promise.all(facesPromises);
-                setRegisteredFaces(faces);
-            }
-
-            setIsProcessing(false);
-        } catch (error) {
-            console.error("Error fetching registered faces:", error);
-            setIsProcessing(false);
-            Alert.alert("Error", "Failed to fetch registered faces. Please try again.");
-        }
-    };
-
-    // Refresh presigned URLs for faces
-    const refreshPresignedUrls = async () => {
-        // Only refresh if we have registered faces
-        if (registeredFaces.length === 0) return;
-
-        try {
-            const updatedFaces = await Promise.all(
-                registeredFaces.map(async (face) => {
-                    // If we have an s3Key, generate a new presigned URL
-                    if (face.s3Key) {
-                        try {
-                            const getObjectParams = {
-                                Bucket: BUCKET_NAME,
-                                Key: face.s3Key
-                            };
-                            const command = new GetObjectCommand(getObjectParams);
-                            const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-
-                            return {
-                                ...face,
-                                uri: presignedUrl
-                            };
-                        } catch (error) {
-                            console.error("Error refreshing presigned URL:", error);
-                            return face; // Return face unchanged if error
-                        }
-                    }
-                    return face; // Return face unchanged if no s3Key
-                })
-            );
-
-            setRegisteredFaces(updatedFaces);
-        } catch (error) {
-            console.error("Error refreshing presigned URLs:", error);
-        }
     };
 
     // Set up an interval to refresh presigned URLs every 50 minutes
@@ -463,7 +156,7 @@ export default function ShieldScreen() {
     }, [registeredFaces]);
 
     useEffect(() => {
-        fetchRegisteredFaces();
+        fetchRegisteredFaces(setIsProcessing, setProcessingStatus, setRegisteredFaces);
     }, []);
 
     return (
@@ -480,7 +173,7 @@ export default function ShieldScreen() {
                                 <Text style={{ color: "red" }}>No faces registered</Text>
                             ) : (
                                 registeredFaces.map((face, index) => (
-                                    <TouchableOpacity key={index} onLongPress={() => deleteFace(index)}>
+                                    <TouchableOpacity key={index} onLongPress={() => deleteFace(index, registeredFaces, setRegisteredFaces,setIsProcessing, setProcessingStatus, deleteFromS3)}>
                                         <Image source={{ uri: face.uri }} style={styles.faceImage} />
                                     </TouchableOpacity>
                                 ))
@@ -493,7 +186,7 @@ export default function ShieldScreen() {
                     <Text style={styles.registerText}>Register New Face</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={fetchRegisteredFaces}
+                    onPress={() => fetchRegisteredFaces(setIsProcessing, setProcessingStatus, setRegisteredFaces)}
                     style={styles.refreshButton}
                     activeOpacity={0.6}
                 >
