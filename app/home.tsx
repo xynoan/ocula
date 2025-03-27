@@ -1,8 +1,9 @@
 import React, { useCallback, useRef, useMemo, useState } from "react";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { StyleSheet, Animated, TouchableOpacity, View, Image } from "react-native";
+import { StyleSheet, Animated, TouchableOpacity, View, Image, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import CameraScreen from "./screens/CameraScreen";
 import ImagesScreen from "./screens/ImagesScreen";
 import ShieldScreen from "./screens/ShieldScreen";
@@ -14,7 +15,11 @@ export default function Index() {
     const sheetRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["15%", "100%"], []);
     const [userSelectedScreen, setUserSelectedScreen] = useState<keyof typeof screens | null>(null);
+    const screenWidth = Dimensions.get('window').width;
+    const translateX = useRef(new Animated.Value(0)).current;
 
+    const screenOrder = useMemo(() => ["camera", "images", "shield", "person"] as const, []);
+    
     const handleSheetChange = useCallback((index: number) => {
         if (index === 0) {
             setActiveScreen("camera");
@@ -46,6 +51,49 @@ export default function Index() {
         }).start();
     };
 
+    const onGestureEvent = Animated.event(
+        [{ nativeEvent: { translationX: translateX } }],
+        { useNativeDriver: true }
+    );
+
+    const onHandlerStateChange = (event: any) => {
+        if (event.nativeEvent.state === 5) { // END state
+            const { translationX } = event.nativeEvent;
+            const currentIndex = screenOrder.indexOf(activeScreen);
+            
+            // Threshold for swipe detection
+            if (Math.abs(translationX) > screenWidth * 0.2) {
+                if (translationX > 0) {
+                    // Swipe right - go to previous screen
+                    const prevIndex = Math.max(0, currentIndex - 1);
+                    const prevScreen = screenOrder[prevIndex];
+                    
+                    if (prevScreen === "camera" && activeScreen !== "camera") {
+                        // When swiping to camera, collapse the bottom sheet
+                        handleSnapPress(0);
+                    } else {
+                        openScreen(prevScreen);
+                    }
+                } else {
+                    // Swipe left - go to next screen
+                    const nextIndex = Math.min(screenOrder.length - 1, currentIndex + 1);
+                    openScreen(screenOrder[nextIndex]);
+                    
+                    // If we're not on the camera tab, ensure the bottom sheet is expanded
+                    if (screenOrder[nextIndex] !== "camera") {
+                        handleSnapPress(1);
+                    }
+                }
+            }
+            
+            // Reset the animation value
+            Animated.spring(translateX, {
+                toValue: 0,
+                useNativeDriver: true,
+            }).start();
+        }
+    };
+
     const iconStyle = { width: 40, height: 40 };
 
     return (
@@ -74,11 +122,20 @@ export default function Index() {
                         <Ionicons name="person" size={40} color="#fffeff" />
                     </TouchableOpacity>
                 </View>
-                <BottomSheetView style={styles.bottomSheetScrollView}>
-                    <Animated.View style={[styles.screenContainer, activeScreen === "camera" ? styles.cameraBackground : null]}>
-                        {screens[activeScreen]}
+                <PanGestureHandler
+                    onGestureEvent={onGestureEvent}
+                    onHandlerStateChange={onHandlerStateChange}
+                >
+                    <Animated.View style={[styles.bottomSheetScrollView, {
+                        transform: [{ translateX }]
+                    }]}>
+                        <BottomSheetView style={styles.bottomSheetView}>
+                            <Animated.View style={[styles.screenContainer, activeScreen === "camera" ? styles.cameraBackground : null]}>
+                                {screens[activeScreen]}
+                            </Animated.View>
+                        </BottomSheetView>
                     </Animated.View>
-                </BottomSheetView>
+                </PanGestureHandler>
             </BottomSheet >
         </GestureHandlerRootView >
     );
@@ -92,4 +149,5 @@ const styles = StyleSheet.create({
     iconContainer: { padding: 10, backgroundColor: "#8bd5cc", borderRadius: 40, alignItems: "center", justifyContent: "center" },
     activeIcon: { backgroundColor: "#214297" },
     bottomSheetScrollView: { flex: 1, backgroundColor: "#d2fffa" },
+    bottomSheetView: { flex: 1 },
 });
