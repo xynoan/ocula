@@ -1,4 +1,3 @@
-// TODO: use liveness detection instead for anti-spoofing.
 import 'react-native-get-random-values';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert, ActivityIndicator } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
