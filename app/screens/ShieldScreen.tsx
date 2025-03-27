@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Image, Alert, ActivityIndicator, Dimensions, StatusBar } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 // AWS config
 import { s3Client, BUCKET_NAME, COLLECTION_ID, rekognitionClient } from "./aws/config";
@@ -159,73 +159,84 @@ export default function ShieldScreen() {
     }, []);
 
     return (
-        <View style={styles.securityContainer}>
-            {/* Face Registration */}
-            <View style={styles.faceContainer}>
-                <View style={styles.faceHeader}>
-                    <Ionicons name="person" size={40} color="#5b7084" />
-                    <View style={{ alignItems: "flex-start" }}>
-                        <Text style={styles.faceTitle}>Registered Faces</Text>
-                        <Text style={styles.instructionText}>Hold a face to delete it</Text>
-                        <View style={styles.faceList}>
-                            {registeredFaces.length === 0 ? (
-                                <Text style={{ color: "red" }}>No faces registered</Text>
-                            ) : (
-                                registeredFaces.map((face, index) => (
-                                    <TouchableOpacity key={index} onLongPress={() => deleteFace(index, registeredFaces, setRegisteredFaces,setIsProcessing, setProcessingStatus, deleteFromS3)}>
-                                        <Image source={{ uri: face.uri }} style={styles.faceImage} />
-                                    </TouchableOpacity>
-                                ))
-                            )}
+        <>
+            <View style={styles.securityContainer}>
+                {/* Face Registration */}
+                <View style={styles.faceContainer}>
+                    <View style={styles.faceHeader}>
+                        <Ionicons name="person" size={40} color="#5b7084" />
+                        <View style={{ alignItems: "flex-start" }}>
+                            <Text style={styles.faceTitle}>Registered Faces</Text>
+                            <Text style={styles.instructionText}>Hold a face to delete it</Text>
+                            <View style={styles.faceList}>
+                                {registeredFaces.length === 0 ? (
+                                    <Text style={{ color: "red" }}>No faces registered</Text>
+                                ) : (
+                                    registeredFaces.map((face, index) => (
+                                        <TouchableOpacity key={index} onLongPress={() => deleteFace(index, registeredFaces, setRegisteredFaces,setIsProcessing, setProcessingStatus, deleteFromS3)}>
+                                            <Image source={{ uri: face.uri }} style={styles.faceImage} />
+                                        </TouchableOpacity>
+                                    ))
+                                )}
+                            </View>
                         </View>
                     </View>
+                    <TouchableOpacity style={styles.registerButton} onPress={handleCameraAccess}>
+                        <Ionicons name="add-outline" size={40} color="#fff" />
+                        <Text style={styles.registerText}>Register New Face</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => fetchRegisteredFaces(setIsProcessing, setProcessingStatus, setRegisteredFaces)}
+                        style={styles.refreshButton}
+                        activeOpacity={0.6}
+                    >
+                        <Ionicons name="refresh" size={24} color="#243483" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.registerButton} onPress={handleCameraAccess}>
-                    <Ionicons name="add-outline" size={40} color="#fff" />
-                    <Text style={styles.registerText}>Register New Face</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => fetchRegisteredFaces(setIsProcessing, setProcessingStatus, setRegisteredFaces)}
-                    style={styles.refreshButton}
-                    activeOpacity={0.6}
-                >
-                    <Ionicons name="refresh" size={24} color="#243483" />
-                </TouchableOpacity>
-            </View>
 
-            {/* Logs Section */}
-            <View style={styles.logsContainer}>
-                <Ionicons name="clipboard-outline" size={40} color="#5b7084" />
-                <Text style={styles.logsTitle}>Logs</Text>
-                <Ionicons name="arrow-forward-circle" size={40} color="#5b7084" />
-            </View>
+                {/* Logs Section */}
+                <View style={styles.logsContainer}>
+                    <Ionicons name="clipboard-outline" size={40} color="#5b7084" />
+                    <Text style={styles.logsTitle}>Logs</Text>
+                    <Ionicons name="arrow-forward-circle" size={40} color="#5b7084" />
+                </View>
 
-            {/* Notification Toggles */}
-            <View style={styles.notificationContainer}>
-                <Ionicons name="people" size={40} color="#5b7084" />
-                <Text style={styles.notificationText}>Circle Entrance Notification</Text>
-                <Switch
-                    trackColor={{ false: "#ccc", true: "#2196F3" }}
-                    thumbColor={isEntranceEnabled ? "#fff" : "#f4f3f4"}
-                    onValueChange={toggleEntrance}
-                    value={isEntranceEnabled}
-                />
-            </View>
+                {/* Notification Toggles */}
+                <View style={styles.notificationContainer}>
+                    <Ionicons name="people" size={40} color="#5b7084" />
+                    <Text style={styles.notificationText}>Circle Entrance Notification</Text>
+                    <Switch
+                        trackColor={{ false: "#ccc", true: "#2196F3" }}
+                        thumbColor={isEntranceEnabled ? "#fff" : "#f4f3f4"}
+                        onValueChange={toggleEntrance}
+                        value={isEntranceEnabled}
+                    />
+                </View>
 
-            <View style={styles.notificationContainer}>
-                <Ionicons name="notifications" size={40} color="#5b7084" />
-                <Text style={styles.notificationText}>Unknown Entity Alert</Text>
-                <Switch
-                    trackColor={{ false: "#ccc", true: "#2196F3" }}
-                    thumbColor={isEntityEnabled ? "#fff" : "#f4f3f4"}
-                    onValueChange={toggleEntity}
-                    value={isEntityEnabled}
-                />
-            </View>
+                <View style={styles.notificationContainer}>
+                    <Ionicons name="notifications" size={40} color="#5b7084" />
+                    <Text style={styles.notificationText}>Unknown Entity Alert</Text>
+                    <Switch
+                        trackColor={{ false: "#ccc", true: "#2196F3" }}
+                        thumbColor={isEntityEnabled ? "#fff" : "#f4f3f4"}
+                        onValueChange={toggleEntity}
+                        value={isEntityEnabled}
+                    />
+                </View>
 
-            {/* Camera Preview */}
+                {/* Processing Indicator */}
+                {isProcessing && (
+                    <View style={styles.processingContainer}>
+                        <ActivityIndicator size="large" color="#243483" />
+                        <Text style={styles.processingText}>{processingStatus}</Text>
+                    </View>
+                )}
+            </View>
+            
+            {/* Camera Preview - Rendered outside main container at root level */}
             {isCameraActive && permission?.granted && (
-                <View style={styles.cameraContainer}>
+                <View style={styles.fullScreenCamera}>
+                    <StatusBar hidden />
                     <CameraView ref={cameraRef} style={styles.camera} facing={cameraType}>
                         <View style={styles.cameraControls}>
                             <TouchableOpacity onPress={switchCamera}>
@@ -234,27 +245,22 @@ export default function ShieldScreen() {
                             <TouchableOpacity onPress={captureFace}>
                                 <Ionicons name="camera-outline" size={40} color="green" />
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setIsCameraActive(false)}>
+                            <TouchableOpacity onPress={() => {
+                                setIsCameraActive(false);
+                                StatusBar.setHidden(false);
+                            }}>
                                 <Ionicons name="close-circle" size={40} color="red" />
                             </TouchableOpacity>
                         </View>
                     </CameraView>
                 </View>
             )}
-
-            {/* Processing Indicator */}
-            {isProcessing && (
-                <View style={styles.processingContainer}>
-                    <ActivityIndicator size="large" color="#243483" />
-                    <Text style={styles.processingText}>{processingStatus}</Text>
-                </View>
-            )}
-        </View>
+        </>
     );
 }
 
 const styles = StyleSheet.create({
-    securityContainer: { flex: 1, alignItems: "flex-start", gap: 15, width: 300, marginTop: 15 },
+    securityContainer: { flex: 1, alignItems: "flex-start", gap: 15, width: "100%", paddingHorizontal: 15, paddingBottom: 15 },
     faceContainer: { alignItems: "flex-start", backgroundColor: "#ededf5", borderRadius: 20, overflow: "hidden", width: "100%", position: "relative" },
     faceHeader: { flexDirection: "row", alignItems: "center", padding: 10, gap: 10 },
     faceTitle: { fontSize: 16, fontWeight: "bold", color: "#243483" },
@@ -266,10 +272,6 @@ const styles = StyleSheet.create({
     logsTitle: { fontSize: 16, fontWeight: "bold", color: "#243483" },
     notificationContainer: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", backgroundColor: "#ededf5", width: "100%", borderRadius: 20, padding: 10 },
     notificationText: { fontSize: 16, fontWeight: "bold", color: "#243483" },
-    cameraContainer: { flex: 1, width: "100%", height: 300, borderRadius: 20, overflow: "hidden" },
-    camera: { flex: 1, justifyContent: "flex-end" },
-    cameraControls: { flexDirection: "row", justifyContent: "space-between", padding: 20, backgroundColor: "rgba(0,0,0,0.5)" },
-    instructionText: { fontSize: 12, color: "#5b7084", marginTop: 2 },
     processingContainer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.8)", justifyContent: "center", alignItems: "center" },
     processingText: { marginTop: 10, fontSize: 16, color: "#243483", fontWeight: "bold" },
     refreshButton: {
@@ -289,4 +291,27 @@ const styles = StyleSheet.create({
         elevation: 5,
         zIndex: 10
     },
+    fullScreenCamera: { 
+        position: "absolute", 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0, 
+        width: "100%", 
+        height: "100%", 
+        zIndex: 1000,
+        backgroundColor: "#000"
+    },
+    camera: { 
+        flex: 1, 
+        justifyContent: "flex-end",
+    },
+    cameraControls: { 
+        flexDirection: "row", 
+        justifyContent: "space-between", 
+        padding: 20, 
+        backgroundColor: "rgba(0,0,0,0.5)",
+        paddingBottom: 40
+    },
+    instructionText: { fontSize: 12, color: "#5b7084", marginTop: 2 },
 });

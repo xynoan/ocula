@@ -104,6 +104,7 @@ export default function Index() {
                 snapPoints={snapPoints}
                 enableDynamicSizing={false}
                 onChange={handleSheetChange}
+                style={styles.bottomSheet}
             >
                 <View style={styles.bottomContainer}>
                     <TouchableOpacity style={[styles.iconContainer, activeScreen === "camera" && styles.activeIcon]} onPress={() => { setActiveScreen("camera"); handleSnapPress(0); }}>
@@ -136,8 +137,8 @@ export default function Index() {
                         </BottomSheetView>
                     </Animated.View>
                 </PanGestureHandler>
-            </BottomSheet >
-        </GestureHandlerRootView >
+            </BottomSheet>
+        </GestureHandlerRootView>
     );
 }
 
@@ -150,4 +151,5 @@ const styles = StyleSheet.create({
     activeIcon: { backgroundColor: "#214297" },
     bottomSheetScrollView: { flex: 1, backgroundColor: "#d2fffa" },
     bottomSheetView: { flex: 1 },
+    bottomSheet: { zIndex: 50 },
 });

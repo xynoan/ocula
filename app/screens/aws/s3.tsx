@@ -5,6 +5,7 @@ import { imageToBase64 } from "../utils/imageUtil";
 import { ListFacesCommand } from "@aws-sdk/client-rekognition";
 import { Alert } from "react-native";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Buffer } from "buffer";
 
 export const uploadToS3 = async (uri: string, imageId: string, setProcessingStatus: (status: string) => void) => {
     try {
