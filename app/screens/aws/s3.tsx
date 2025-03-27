@@ -131,3 +131,5 @@ export const refreshPresignedUrls = async (registeredFaces: any[], setRegistered
         console.error("Error refreshing presigned URLs:", error);
     }
 };
+
+export default uploadToS3;

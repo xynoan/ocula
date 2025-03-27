@@ -154,3 +154,5 @@ export const deleteFace = (index: number, registeredFaces: any[], setRegisteredF
         ]
     );
 };
+
+export default detectFaces;

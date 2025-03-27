@@ -11,3 +11,5 @@ export const imageToBase64 = async (uri: string) => {
         reader.readAsDataURL(blob);
     });
 };
+
+export default imageToBase64;
