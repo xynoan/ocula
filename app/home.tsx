@@ -52,16 +52,27 @@ export default function Index() {
     };
 
     const onGestureEvent = Animated.event(
-        [{ nativeEvent: { translationX: translateX } }],
+        [{ nativeEvent: { 
+            translationX: translateX,
+            translationY: new Animated.Value(0)
+        } }],
         { useNativeDriver: true }
     );
 
     const onHandlerStateChange = (event: any) => {
         if (event.nativeEvent.state === 5) { // END state
-            const { translationX } = event.nativeEvent;
-            const currentIndex = screenOrder.indexOf(activeScreen);
+            const { translationX, translationY } = event.nativeEvent;
             
-            // Threshold for swipe detection
+            // Handle vertical swipe
+            if (Math.abs(translationY) > Math.abs(translationX)) {
+                if (translationY > 50) { // Threshold for swipe down
+                    handleSnapPress(0); // Collapse the bottom sheet
+                    return;
+                }
+            }
+
+            // Existing horizontal swipe logic
+            const currentIndex = screenOrder.indexOf(activeScreen);
             if (Math.abs(translationX) > screenWidth * 0.2) {
                 if (translationX > 0) {
                     // Swipe right - go to previous screen
