@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TextInput, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import app from "../firebaseConfig";
 
 export default function Index() {
     const router = useRouter();
@@ -52,16 +54,26 @@ export default function Index() {
                     return;
                 }
 
-                Alert.alert(
-                    "Account Created",
-                    "Let's set up your profile!",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => router.push("/profile-setup")
-                        }
-                    ]
-                );
+                // Create Firebase user with email and password
+                try {
+                    const auth = getAuth(app);
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    console.log("Firebase user created successfully");
+                    
+                    Alert.alert(
+                        "Account Created",
+                        "Let's set up your profile!",
+                        [
+                            {
+                                text: "OK",
+                                onPress: () => router.push("/profile-setup")
+                            }
+                        ]
+                    );
+                } catch (firebaseError) {
+                    console.error("Firebase error:", firebaseError);
+                    Alert.alert("Error", "Failed to create account. Please try again.");
+                }
             } else {
                 Alert.alert("Error", "Invalid OTP.");
             }
